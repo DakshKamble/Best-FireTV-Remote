@@ -5,12 +5,17 @@
 BleKeyboard bleKeyboard("Fire TV Remote", "ESP32", 100);
 
 // Button configuration
-const int HOME_BUTTON_PIN = 4;   // D4 on ESP32
-const int UP_BUTTON_PIN = 19;    // D19 on ESP32
-const int DOWN_BUTTON_PIN = 22;  // D22 on ESP32
-const int LEFT_BUTTON_PIN = 18;  // D18 on ESP32
-const int RIGHT_BUTTON_PIN = 21; // D21 on ESP32
-const int DEBOUNCE_DELAY = 50;   // 50ms debounce
+const int HOME_BUTTON_PIN = 4;     // D4 on ESP32
+const int UP_BUTTON_PIN = 19;      // D19 on ESP32
+const int DOWN_BUTTON_PIN = 22;    // D22 on ESP32
+const int LEFT_BUTTON_PIN = 18;    // D18 on ESP32
+const int RIGHT_BUTTON_PIN = 21;   // D21 on ESP32
+const int BACK_BUTTON_PIN = 2;     // D2 on ESP32
+const int OPTION_BUTTON_PIN = 5;   // D5 on ESP32
+const int PLAY_PAUSE_BUTTON_PIN = 12; // D12 on ESP32
+const int FORWARD_BUTTON_PIN = 14; // D14 on ESP32
+const int BACKWARD_BUTTON_PIN = 13; // D13 on ESP32
+const int DEBOUNCE_DELAY = 50;     // 50ms debounce
 
 // Button state tracking for all buttons
 struct Button {
@@ -26,7 +31,12 @@ Button buttons[] = {
   {UP_BUTTON_PIN, HIGH, HIGH, 0, "UP"},
   {DOWN_BUTTON_PIN, HIGH, HIGH, 0, "DOWN"},
   {LEFT_BUTTON_PIN, HIGH, HIGH, 0, "LEFT"},
-  {RIGHT_BUTTON_PIN, HIGH, HIGH, 0, "RIGHT"}
+  {RIGHT_BUTTON_PIN, HIGH, HIGH, 0, "RIGHT"},
+  {BACK_BUTTON_PIN, HIGH, HIGH, 0, "BACK"},
+  {OPTION_BUTTON_PIN, HIGH, HIGH, 0, "OPTION"},
+  {PLAY_PAUSE_BUTTON_PIN, HIGH, HIGH, 0, "PLAY_PAUSE"},
+  {FORWARD_BUTTON_PIN, HIGH, HIGH, 0, "FORWARD"},
+  {BACKWARD_BUTTON_PIN, HIGH, HIGH, 0, "BACKWARD"}
 };
 
 const int NUM_BUTTONS = sizeof(buttons) / sizeof(buttons[0]);
@@ -96,6 +106,36 @@ void loop() {
                 Serial.println("Sending RIGHT arrow");
                 bleKeyboard.write(KEY_RIGHT_ARROW);
                 break;
+              case 5: // BACK button
+                Serial.println("Sending BACK key (Android KEYCODE_BACK)");
+                // Fire TV expects Android KEYCODE_BACK (4) - try Alt+Left as alternative
+                bleKeyboard.press(KEY_LEFT_ALT);
+                bleKeyboard.press(KEY_LEFT_ARROW);
+                delay(100);
+                bleKeyboard.releaseAll();
+                break;
+              case 6: // OPTION button (Menu)
+                Serial.println("Sending MENU key (Android KEYCODE_MENU)");
+                // Fire TV expects Android KEYCODE_MENU (82) - try Ctrl+M as alternative
+                bleKeyboard.press(KEY_LEFT_CTRL);
+                bleKeyboard.press('m');
+                delay(100);
+                bleKeyboard.releaseAll();
+                break;
+              case 7: // PLAY_PAUSE button
+                Serial.println("Sending PLAY/PAUSE media key");
+                bleKeyboard.write(KEY_MEDIA_PLAY_PAUSE);
+                break;
+              case 8: // FORWARD button (Fast Forward - Video Scrubbing)
+                Serial.println("Sending FAST FORWARD (video scrub forward)");
+                // Android TV: Right D-pad button during playback = fast forward scrubbing
+                bleKeyboard.write(KEY_RIGHT_ARROW);
+                break;
+              case 9: // BACKWARD button (Rewind - Video Scrubbing)
+                Serial.println("Sending REWIND (video scrub backward)");
+                // Android TV: Left D-pad button during playback = rewind scrubbing
+                bleKeyboard.write(KEY_LEFT_ARROW);
+                break;
             }
             
             delay(200); // Prevent multiple rapid presses
@@ -141,6 +181,11 @@ void loop() {
  * - DOWN button: Connect between GPIO 22 (D22) and GND
  * - LEFT button: Connect between GPIO 18 (D18) and GND
  * - RIGHT button: Connect between GPIO 21 (D21) and GND
+ * - BACK button: Connect between GPIO 2 (D2) and GND
+ * - OPTION button: Connect between GPIO 5 (D5) and GND
+ * - PLAY/PAUSE button: Connect between GPIO 12 (D12) and GND
+ * - FORWARD button: Connect between GPIO 14 (D14) and GND
+ * - BACKWARD button: Connect between GPIO 13 (D13) and GND
  * - All buttons use internal pull-up resistors
  * 
  * BLE Pairing:
@@ -152,8 +197,13 @@ void loop() {
  * 6. Once connected, the home button will work
  * 
  * Button Functions:
- * - Home Button (GPIO 5): Sends Fire TV home command
- * - Test sequence runs every 10 seconds when connected (remove for production)
+ * - HOME button (GPIO 4): Fire TV home screen
+ * - UP/DOWN/LEFT/RIGHT buttons: Navigation arrows
+ * - BACK button (GPIO 2): Back/Exit (ESC key)
+ * - OPTION button (GPIO 5): Fire TV menu/settings
+ * - PLAY/PAUSE button (GPIO 12): Play/Pause media
+ * - FORWARD button (GPIO 14): Fast forward video (scrub forward)
+ * - BACKWARD button (GPIO 13): Rewind video (scrub backward)
  * 
  * Media Keys Available:
  * - KEY_MEDIA_WWW_HOME (Fire TV home)
