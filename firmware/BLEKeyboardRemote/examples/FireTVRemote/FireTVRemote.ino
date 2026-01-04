@@ -4,23 +4,22 @@
  * This example demonstrates how to use the ESP32 as a Bluetooth remote control
  * for Amazon Fire TV, including the newly added Fast Forward and Rewind functions.
  */
-#include <Arduino.h>
 #include <BleKeyboard.h>
 
 // Create a BLE Keyboard instance with a custom name
 BleKeyboard bleKeyboard("FireTV Remote", "ESP32", 100);
 
 // Define button pins (adjust these to match your hardware)
-#define BUTTON_UP     19
-#define BUTTON_DOWN   22
-#define BUTTON_LEFT   18
-#define BUTTON_RIGHT  21
+#define BUTTON_UP     12
+#define BUTTON_DOWN   14
+#define BUTTON_LEFT   27
+#define BUTTON_RIGHT  26
 #define BUTTON_SELECT 25
-#define BUTTON_BACK   5
-#define BUTTON_HOME   4
-#define BUTTON_PLAY   12
-#define BUTTON_FF     14  // Fast Forward button
-#define BUTTON_REW    13  // Rewind button
+#define BUTTON_BACK   33
+#define BUTTON_HOME   32
+#define BUTTON_PLAY   13
+#define BUTTON_FF     15  // Fast Forward button
+#define BUTTON_REW    4   // Rewind button
 
 // Variables to track button states
 bool lastButtonStates[10] = {false, false, false, false, false, false, false, false, false, false};
@@ -92,12 +91,12 @@ void loop() {
     
     if (currentButtonStates[5] && !lastButtonStates[5]) {
       Serial.println("BACK pressed");
-      bleKeyboard.write(KEY_MEDIA_WWW_BACK);
+      bleKeyboard.write(KEY_ESC);
     }
     
     if (currentButtonStates[6] && !lastButtonStates[6]) {
       Serial.println("HOME pressed");
-      bleKeyboard.write(KEY_MEDIA_WWW_HOME);
+      bleKeyboard.write(KEY_HOME);
     }
     
     if (currentButtonStates[7] && !lastButtonStates[7]) {

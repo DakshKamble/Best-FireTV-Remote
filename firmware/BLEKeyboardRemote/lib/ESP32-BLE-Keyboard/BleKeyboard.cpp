@@ -73,7 +73,7 @@ static const uint8_t _hidReportDescriptor[] = {
   LOGICAL_MINIMUM(1), 0x00,          //   LOGICAL_MINIMUM (0)
   LOGICAL_MAXIMUM(1), 0x01,          //   LOGICAL_MAXIMUM (1)
   REPORT_SIZE(1),     0x01,          //   REPORT_SIZE (1)
-  REPORT_COUNT(1),    0x10,          //   REPORT_COUNT (16)
+  REPORT_COUNT(1),    0x12,          //   REPORT_COUNT (18)
   USAGE(1),           0xB5,          //   USAGE (Scan Next Track)     ; bit 0: 1
   USAGE(1),           0xB6,          //   USAGE (Scan Previous Track) ; bit 1: 2
   USAGE(1),           0xB7,          //   USAGE (Stop)                ; bit 2: 4
@@ -90,6 +90,8 @@ static const uint8_t _hidReportDescriptor[] = {
   USAGE(2),           0x24, 0x02,    //   Usage (WWW back)    ; bit 5: 32
   USAGE(2),           0x83, 0x01,    //   Usage (Media sel)   ; bit 6: 64
   USAGE(2),           0x8A, 0x01,    //   Usage (Mail)        ; bit 7: 128
+  USAGE(1),           0xB3,          //   Usage (Fast Forward); bit 4: 16 (2nd byte)
+  USAGE(1),           0xB4,          //   Usage (Rewind)      ; bit 5: 32 (2nd byte)
   HIDINPUT(1),        0x02,          //   INPUT (Data,Var,Abs,No Wrap,Linear,Preferred State,No Null Position)
   END_COLLECTION(0)                  // END_COLLECTION
 };
@@ -98,7 +100,13 @@ BleKeyboard::BleKeyboard(std::string deviceName, std::string deviceManufacturer,
     : hid(0)
     , deviceName(std::string(deviceName).substr(0, 15))
     , deviceManufacturer(std::string(deviceManufacturer).substr(0,15))
-    , batteryLevel(batteryLevel) {}
+    , batteryLevel(batteryLevel) 
+{
+    // Initialize media key report with zeros
+    _mediaKeyReport[0] = 0;
+    _mediaKeyReport[1] = 0;
+    _mediaKeyReport[2] = 0;
+}
 
 void BleKeyboard::begin(void)
 {
@@ -182,6 +190,7 @@ void BleKeyboard::sendReport(MediaKeyReport* keys)
 {
   if (this->isConnected())
   {
+    // Use the full 3-byte MediaKeyReport size
     this->inputMediaKeys->setValue((uint8_t*)keys, sizeof(MediaKeyReport));
     this->inputMediaKeys->notify();
 #if defined(USE_NIMBLE)        
@@ -378,12 +387,16 @@ size_t BleKeyboard::press(uint8_t k)
 
 size_t BleKeyboard::press(const MediaKeyReport k)
 {
+    // Handle first two bytes as before
     uint16_t k_16 = k[1] | (k[0] << 8);
     uint16_t mediaKeyReport_16 = _mediaKeyReport[1] | (_mediaKeyReport[0] << 8);
 
     mediaKeyReport_16 |= k_16;
     _mediaKeyReport[0] = (uint8_t)((mediaKeyReport_16 & 0xFF00) >> 8);
     _mediaKeyReport[1] = (uint8_t)(mediaKeyReport_16 & 0x00FF);
+    
+    // Handle third byte for extended media keys
+    _mediaKeyReport[2] |= k[2];
 
 	sendReport(&_mediaKeyReport);
 	return 1;
@@ -425,11 +438,15 @@ size_t BleKeyboard::release(uint8_t k)
 
 size_t BleKeyboard::release(const MediaKeyReport k)
 {
+    // Handle first two bytes as before
     uint16_t k_16 = k[1] | (k[0] << 8);
     uint16_t mediaKeyReport_16 = _mediaKeyReport[1] | (_mediaKeyReport[0] << 8);
     mediaKeyReport_16 &= ~k_16;
     _mediaKeyReport[0] = (uint8_t)((mediaKeyReport_16 & 0xFF00) >> 8);
     _mediaKeyReport[1] = (uint8_t)(mediaKeyReport_16 & 0x00FF);
+    
+    // Handle third byte for extended media keys
+    _mediaKeyReport[2] &= ~k[2];
 
 	sendReport(&_mediaKeyReport);
 	return 1;
@@ -446,6 +463,7 @@ void BleKeyboard::releaseAll(void)
 	_keyReport.modifiers = 0;
     _mediaKeyReport[0] = 0;
     _mediaKeyReport[1] = 0;
+    _mediaKeyReport[2] = 0; // Clear the third byte for extended media keys
 	sendReport(&_keyReport);
 }
 
